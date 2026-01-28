@@ -100,10 +100,13 @@ LIST OF FUNCTIONS
     - DrivenSpins!          :: Assigns the Driven and LGDriven fields for each spin based on their assigned branch.
     - getHamiltonian        :: Obtains the Hamiltonian operator for a term in the CCE.
     - getMFHamiltonian      :: Obtains the mean-field part of the Hamiltonian operator for a term in the CCE.
+    - GetIndices            :: Gets the indices corresponding to each term in the CCE at some order.
     - IntAvSignal           :: Performs the mean-field averaging of a term in the CCE.
     - pCCECalculation       :: Computes the coherence function of the central spin in the pCCE approximation.
     - Compute               :: Generates a spin bath and computes the corresponding coherence function.
     - HahnSignal            :: Computes the coherence signal averages over different spatial configurations.  
+
+Click ? on the Julia terminal and write Functions.func or MyTypes.type for help on the function func or the struct type.
 
 HOW TO RUN
 

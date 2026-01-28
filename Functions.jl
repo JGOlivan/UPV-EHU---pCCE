@@ -9,19 +9,21 @@ export HahnSignal
 
 using StructArrays, SparseArrays, LinearAlgebra, Statistics, Random, Combinatorics, FastExpm, JuMP, Distributed, ProgressMeter, GLPK
 
+"""
+    createSpin(Pos :: Position{<:Real}, ID :: Int64, Species :: String)
+
+Create a Spin object with some position in the lattice and some chemical species assigned.
+
+    Parameters:
+        - Pos         :: position vector of the spin.
+        - ID          :: a unique label assigned to the spin.
+        - Species     :: the chemical species of the spin.
+
+    Returns:
+        - A spin object with the specified parameters.
+"""
 function createSpin(Pos :: Position{<:Real}, ID :: Int64, Species :: String)
 
-    """
-    Create a Spin object with some position in the lattice and some chemical species assigned.
-
-        Parameters:
-            - Pos         :: position vector of the spin.
-            - ID          :: a unique label assigned to the spin.
-            - Species     :: the chemical species of the spin.
-
-        Returns:
-            - A spin object with the specified parameters.
-    """
 
     NucSpin = Species == "N14" ? 1. : Species == "N15" ? 1/2 : 0.0
     GyroRatio = Species in ("N14", "N15", "e", "N2") ? ge : 0.0
@@ -30,17 +32,19 @@ end
 
 
 
+"""
+    change_basis(vec :: Position{Float64})
+
+Change of basis from (100) to (111) diamond 
+
+    Parameters:
+        - vec        :: a position vector for a spin in the lattice
+    
+    Returns:
+        - The vector in the rotated basis
+"""
 function change_basis(vec :: Position{Float64})
 
-    """
-    Change of basis from (100) to (111) diamond 
-
-        Parameters:
-            - vec        :: a position vector for a spin in the lattice
-        
-        Returns:
-            - The vector in the rotated basis
-    """
 
     theta_x = atan(sqrt(2))
     theta_z = pi / 4
@@ -57,6 +61,19 @@ end
 
 
 
+""" 
+    generate_position(
+        iterations_x    :: Int64,
+        iterations_y    :: Int64,
+        iterations_z    :: Int64,
+        var1            :: Vector{Int64}, 
+        var2            :: Vector{Int64}, 
+        var3            :: Vector{Int64}, 
+        choice_list     :: Vector{Vector{Int64}},
+    )
+
+Generates a random position in the lattice 
+"""
 function generate_position(
     iterations_x    :: Int64,
     iterations_y    :: Int64,
@@ -66,8 +83,6 @@ function generate_position(
     var3            :: Vector{Int64}, 
     choice_list     :: Vector{Vector{Int64}},
 )
-
-    """ Generates a random position in the lattice """
 
     rand1 = rand(-iterations_x:iterations_x)
     rand2 = rand(-iterations_y:iterations_y)
@@ -82,6 +97,28 @@ end
 
 
 
+"""  
+    lattice_generator(
+        concentration       :: Float64,
+        number_spins        :: Int64,
+        rMF                 :: Float64,
+        seed                :: Int64,
+        Species             :: String
+    )
+
+Generate a list of bath spins and a list of mean-field spins
+
+    Parameters:
+        - concentration     :: the concentration of the spins in the lattice
+        - number_spins      :: the number of bath spins in the lattice
+        - rMF               :: the radius of mean-field lattice
+        - seed              :: a seed for random number generation (0 for randomness)
+        - Species           :: the chemical species of the spins in the lattice
+    
+    Returns:
+        - A list of Spin objects containing the bath spins
+        - A list of Spin objects containing the mean-field spins
+"""
 function lattice_generator(
     concentration       :: Float64,
     number_spins        :: Int64,
@@ -89,21 +126,6 @@ function lattice_generator(
     seed                :: Int64,
     Species             :: String
 )
-
-    """  
-    Generate a list of bath spins and a list of mean-field spins
-    
-        Parameters:
-            - concentration     :: the concentration of the spins in the lattice
-            - number_spins      :: the number of bath spins in the lattice
-            - rMF               :: the radius of mean-field lattice
-            - seed              :: a seed for random number generation (0 for randomness)
-            - Species           :: the chemical species of the spins in the lattice
-        
-        Returns:
-            - A list of Spin objects containing the bath spins
-            - A list of Spin objects containing the mean-field spins
-    """
 
     # Set a random seed for reproducibility if desired
 
@@ -188,6 +210,27 @@ end
 
 
 
+"""
+    constrainedKMeans(
+        X            :: Vector{Position{Float64}}, 
+        K            :: Int64,
+        tau_max      :: Vector{Int64},
+        tau_min      :: Vector{Int64},
+        maxiter      :: Int64
+    )
+
+This function partitions a dataset applying a constrained KMeans algorithm.
+
+        Parameters:
+            - X         :: the dataset (a list of positions)
+            - K         :: the number of partitions desired
+            - tau_max   :: the maximum size for each partition
+            - tau_min   :: the minimum size for each partition
+            - maxiter   :: the maximum number of iterations of the optimization algorithm
+        
+        Returns:
+            - A list of labels for each data point corresponding to the assigned partition
+"""
 function constrainedKMeans(
     X            :: Vector{Position{Float64}}, 
     K            :: Int64,
@@ -195,20 +238,6 @@ function constrainedKMeans(
     tau_min      :: Vector{Int64},
     maxiter      :: Int64
     )
-
-    """
-    This function partitions a dataset applying a constrained KMeans algorithm.
-
-            Parameters:
-                - X         :: the dataset (a list of positions)
-                - K         :: the number of partitions desired
-                - tau_max   :: the maximum size for each partition
-                - tau_min   :: the minimum size for each partition
-                - maxiter   :: the maximum number of iterations of the optimization algorithm
-            
-            Returns:
-                - A list of labels for each data point corresponding to the assigned partition
-    """
 
     # Get dataset dimensions.
     n = length(X) # number of spins in the bath 
@@ -316,21 +345,25 @@ end
 
 
 
+"""
+    get_partitions!(
+        partitionSize       :: Int64,
+        bathSpins           :: StructArray
+    )
+
+Partitions a bath of spins into groups of strongly interacting spins using a constrained KMeans algorithm.
+
+    Parameters:
+        - partition Size    :: the size of the partitions
+        - bathSpins         :: the list of bath spins
+
+    Returns:
+        - the list of bath spins with the assigned partition
+"""
 function get_partitions!(
     partitionSize       :: Int64,
     bathSpins           :: StructArray
 )
-
-    """
-    Partitions a bath of spins into groups of strongly interacting spins using a constrained KMeans algorithm.
-    
-        Parameters:
-            - partition Size    :: the size of the partitions
-            - bathSpins         :: the list of bath spins
-
-        Returns:
-            - the list of bath spins with the assigned partition
-    """
 
     numP1 = bathSpins.ID[end]
 
@@ -349,18 +382,19 @@ end
 
 
 
+"""
+    hyperfineNV(r :: Position{<:Real}, GyroRatio :: Float64)
+
+Computes the interaction vector betweem an NV center (or a simple e spin) and another spin (nuclear or electron).
+
+    Parameters:
+        - r             :: the position of the spin with respect to the NV center
+        - GyroRatio     :: the gyromagnetic ratio of the spin
+
+    Returns:
+        - the components of the interaction vector Ax, Ay, Az.
+"""
 function hyperfineNV(r :: Position{<:Real}, GyroRatio :: Float64)
-
-    """
-    Computes the interaction vector betweem an NV center (or a simple e spin) and another spin (nuclear or electron).
-
-        Parameters:
-            - r             :: the position of the spin with respect to the NV center
-            - GyroRatio     :: the gyromagnetic ratio of the spin
-
-        Returns:
-            - the components of the interaction vector Ax, Ay, Az.
-    """
 
     G = ge * GyroRatio * mu0 * hbar / 2.0
 
@@ -374,19 +408,21 @@ end
 
 
 
+"""
+    DipoleDipole(r :: Position{Float64}, GyroRatio1 :: Float64, GyroRatio2 :: Float64)
+
+Computes the interaction strength between two bath spins with similar Larmor frequency.
+
+    Parameters:
+        - r             :: the relative vector connecting the two spins
+        - GyroRatio1    :: the gyromagnetic ratio of the first spin.
+        - GyroRatio2    :: the gyromagnetic ratio of the second spin.
+
+    Returs:
+        - the interaction coupling C.
+"""
 function DipoleDipole(r :: Position{Float64}, GyroRatio1 :: Float64, GyroRatio2 :: Float64)
 
-    """
-    Computes the interaction strength between two bath spins with similar Larmor frequency.
-    
-        Parameters:
-            - r             :: the relative vector connecting the two spins
-            - GyroRatio1    :: the gyromagnetic ratio of the first spin.
-            - GyroRatio2    :: the gyromagnetic ratio of the second spin.
-
-        Returs:
-            - the interaction coupling C.
-    """
 
     G = GyroRatio1 * GyroRatio2 * mu0 * hbar / 2.0
 
@@ -395,9 +431,11 @@ end
 
 
 
+""" 
+    getSpinOps(N :: Int64, Sparse :: Bool)
+Obtain NV and P1 spin operators for a (1 + N) spin system
+"""
 function getSpinOps(N :: Int64, Sparse :: Bool)
-
-    """ Obtain NV and P1 spin operators for a (1 + N) spin system """
 
     sigmax :: Matrix{ComplexF64} = [0 1; 1 0] # these are now defined in constants
     sigmay :: Matrix{ComplexF64} = [0 -im; im 0]
@@ -442,17 +480,16 @@ end
 
 
 
-function GetBranches!(bathSpins :: StructArray)
+""" 
+    GetBranches!(bathSpins :: StructArray)
 
-    """ 
-    Assigns a resonance line to the bath spins.
+Assigns a resonance line to the bath spins.
 
-        Parameters:
-            - bathSpins     :: the list of bath spins
+    Parameters:
+        - bathSpins     :: the list of bath spins
 
-        Returns:
-            - the list of bath spins with assigned branches
-
+    Returns:
+        - the list of bath spins with assigned branches
 
     The following is a schematic depiction of the P1 bath resonance structure:
 
@@ -472,8 +509,8 @@ function GetBranches!(bathSpins :: StructArray)
                           | | | | |
                           | | | | |
                           |   |   |
-    """
-
+"""
+function GetBranches!(bathSpins :: StructArray)
 
     if bathSpins.Species[1] == "e" # Electrons: 1 branch
 
@@ -519,23 +556,28 @@ end
 
 
 
+"""
+    DrivenSpins!(
+        bathSpins       :: StructArray,
+        DrivenLines     :: Dict{Int64, Float64},
+        LGDriven        :: Dict{Int64, Float64}
+    )
+
+Assigns a true or false label to driven/not driven spins based on the asssigned branch.
+
+    Parameters:
+        - bathSpins     :: the list of bath spins.
+        - DrivenLines   :: a dictionary that indicates which lines are driven.
+        - LDGriven      :: a dictionary that indicates which lines are LG driven.
+
+    Returns:
+        - the list of bath spins with the corresponding labels
+"""
 function DrivenSpins!(
     bathSpins       :: StructArray,
     DrivenLines     :: Dict{Int64, Float64},
     LGDriven        :: Dict{Int64, Float64}
 )
-
-    """
-    Assigns a true or false label to driven/not driven spins based on the asssigned branch.
-
-        Parameters:
-            - bathSpins     :: the list of bath spins.
-            - DrivenLines   :: a dictionary that indicates which lines are driven.
-            - LDGriven      :: a dictionary that indicates which lines are LG driven.
-
-        Returns:
-            - the list of bath spins with the corresponding labels
-    """
 
     for i in eachindex(bathSpins)
         bathSpins.Driven[i] = DrivenLines[bathSpins.Branch[i]] == 1.0 ? true : false
@@ -547,6 +589,34 @@ end
 
 
 
+"""
+    getHamiltonian(
+        indices             :: Vector{Int64},
+        D                   :: Driving{Float64, String},
+        rDipole             :: Float64,
+        Sparse              :: Bool,
+        spinOps             :: spinOperators,
+        bathSpins           :: StructArray
+    )
+
+This function obtains the Hamiltonian operator for some partition(s) of bath spins.
+
+    Parameters:
+        - indices       :: A list of indices corresponding to some partition(s).
+        - D             :: A Driving type describing a single bath driving tone.
+        - rDipole       :: A cutoff distance for including interactions between bath spins.
+        - Sparse        :: True for working with sparse matrices.
+        - spinOps       :: The spin operators for every spin.
+        - bathSpins     :: The list of all bath spins.
+
+    Returns:
+        - The P1 Hamiltonian.
+        - The P1-NV interaction Hamiltonian.
+        - The P1-P1 interaction Hamiltonian within a partition.
+        - The driving Hamiltonian along A axis (Resonant and LG driving). 
+        - The driving Hamiltonian along B axis (FSLG and LG4 driving).
+        - The P1-P1 interaction between partitions (only for more than one partition).
+"""
 function getHamiltonian(
     indices             :: Vector{Int64},
     D                   :: Driving{Float64, String},
@@ -555,26 +625,6 @@ function getHamiltonian(
     spinOps             :: spinOperators,
     bathSpins           :: StructArray
 )
-
-    """
-    This function obtains the Hamiltonian operator for some partition(s) of bath spins.
-
-        Parameters:
-            - indices       :: A list of indices corresponding to some partition(s).
-            - D             :: A Driving type describing a single bath driving tone.
-            - rDipole       :: A cutoff distance for including interactions between bath spins.
-            - Sparse        :: True for working with sparse matrices.
-            - spinOps       :: The spin operators for every spin.
-            - bathSpins     :: The list of all bath spins.
-
-        Returns:
-            - The P1 Hamiltonian.
-            - The P1-NV interaction Hamiltonian.
-            - The P1-P1 interaction Hamiltonian within a partition.
-            - The driving Hamiltonian along A axis (Resonant and LG driving). 
-            - The driving Hamiltonian along B axis (FSLG and LG4 driving).
-            - The P1-P1 interaction between partitions (only for more than one partition).
-    """
 
     alpha = D.alpha
     Omega = D.Omega
@@ -688,6 +738,31 @@ end
 
 
 
+"""
+    getMFHamiltonian(
+        bathSpins               :: StructArray,
+        mfSpins                 :: StructArray,
+        indices                 :: Vector{Int64},
+        mfStates                :: Vector{Float64},
+        totalPositions          :: Vector{Position{Float64}},
+        spinOps                 :: spinOperators,
+        D                       :: Driving{Float64, String}  
+    )
+
+This function obtains the mean-field part of the Hamiltonian for some partition(s) of bath spins.
+
+    Parameters:
+        - bathSpins         :: The list of all bath spins.
+        - mfSpins           :: The list of all mean-field spins.
+        - indices           :: A list of indices corresponding to some partition(s).
+        - mfStates          :: A list of random states for mean-field spins.
+        - totalPositions    :: A list of positions of the spin in the partition(s).
+        - spinOps           :: The spin operators for all the spins.
+        - D                 :: A Driving object describing a single tone of bath driving.
+        
+    Returns:
+        - The mean-field part of the Hamiltonian.
+"""
 function getMFHamiltonian(
     bathSpins               :: StructArray,
     mfSpins                 :: StructArray,
@@ -697,22 +772,6 @@ function getMFHamiltonian(
     spinOps                 :: spinOperators,
     D                       :: Driving{Float64, String}  
 )
-
-    """
-    This function obtains the mean-field part of the Hamiltonian for some partition(s) of bath spins.
-
-        Parameters:
-            - bathSpins         :: The list of all bath spins.
-            - mfSpins           :: The list of all mean-field spins.
-            - indices           :: A list of indices corresponding to some partition(s).
-            - mfStates          :: A list of random states for mean-field spins.
-            - totalPositions    :: A list of positions of the spin in the partition(s).
-            - spinOps           :: The spin operators for all the spins.
-            - D                 :: A Driving object describing a single tone of bath driving.
-            
-        Returns:
-            - The mean-field part of the Hamiltonian.
-    """
 
     alpha = D.alpha
 
@@ -806,15 +865,19 @@ end
 
 
 
-function GetIndices(order :: Int64, N :: Int64)
+"""
+    GetIndices(order :: Int64, N :: Int64)
 
-    """
-    Gets the indices corresponding to each term in the CCE at some order. Example for a 4 spin system (N=4):
+Gets the indices corresponding to each term in the CCE at some order. 
+
+    Example for a 4 spin system (N=4):
         - order = 1: returns: [[1], [2], [3], [4]]
         - order = 2: returns: [[2, 1], [3, 1], [4, 1], [3, 2], [4, 2], [4, 3]]
         - order = 3: returns: [[3, 2, 1], [4, 2, 1], [4, 3, 1], [4, 3, 2]]
         - order = 4: returns: [[4, 3, 2, 1]]
-    """
+"""
+function GetIndices(order :: Int64, N :: Int64)
+
 
     ranges = [range(order - k + 1, N + 1 - k) for k in 1:order]
     allIndices = collect(Iterators.product(ranges...))
@@ -823,7 +886,43 @@ function GetIndices(order :: Int64, N :: Int64)
 end
 
 
+"""
+    IntAvSignal(
+        mfStates            :: Vector{Float64},
+        bathSpins           :: StructArray,      
+        mfSpins             :: StructArray,
+        index               :: Vector{Int64},
+        totalPositions      :: Vector{Position{Float64}},
+        spinOps             :: spinOperators,
+        D                   :: Driving{Float64, String},
+        H0                  :: Matrix{ComplexF64},
+        timeVec             :: AbstractVector,
+        ux                  :: Matrix{ComplexF64},
+        nPulse              :: Int64,
+        rho0                :: Matrix{Float64},
+        meanField           :: Bool
+    )
 
+This function computes a coherence term in the CCE for one sample of the mean-field.
+
+    Parameters:
+        - mfStates          :: A vector of random states for the mean-field spins.
+        - bathSpins         :: The list of bath spins.
+        - mfSpins           :: The list of mean-field spins.
+        - index             :: The indices corresponding to the considered partition(s).
+        - totalPositions    :: The positions of all the spins in the considered partition(s).
+        - spinOps           :: The spin operators of all the spins.
+        - D                 :: A Driving type describing a single tone bath driving.
+        - H0                :: The Hamiltonian operator for the considered partition(s).
+        - timeVec           :: The vector containing the sampled of tau vectors.
+        - ux                :: The pi-pulse operator for the central spin.
+        - nPulse            :: The number of pulses applied to the central spin.
+        - rho0              :: The initial state of the central spin.
+        - meanField         :: True if a mean field is to be considered.
+
+    Returns:
+        - A coherence term in the CCE for a single sample of the mean-field.
+"""
 function IntAvSignal(
     mfStates            :: Vector{Float64},
     bathSpins           :: StructArray,      
@@ -862,7 +961,43 @@ function IntAvSignal(
 end
 
 
+"""
+    pCCECalculation(
+        pCCEOrder           :: Int64,
+        rDipole             :: Float64,
+        numExtAv            :: Int64,
+        numIntAv            :: Int64,
+        bathSpins           :: StructArray,
+        mfSpins             :: StructArray,
+        tauMax              :: Float64,
+        points              :: Int64,
+        D                   :: Driving{Float64, String},
+        nPulse              :: Int64,
+        rhoNV               :: Matrix{Float64},
+        Sparse              :: Bool,
+        meanField           :: Bool
+    )
 
+This function computes the coherence function for a single bath configuration.
+
+    Parameters:
+        - pCCEOrder         :: The order of approximation in the CCE.
+        - rDipole           :: The cutoff distance for considering interactions between bath spins.
+        - numExtAv          :: The number of external mean-field averages.        
+        - numIntAv          :: The number of internal mean-field averages.  
+        - bathSpins         :: The list of bath spins.
+        - mfSpins           :: The list of mean-field spins.
+        - tauMax            :: The free evolution period duration.
+        - points            :: The number of sampling points for the coherence function.
+        - D                 :: A Driving type describing a single bath driving tone.
+        - nPulse            :: The number of pi-pulses applied to the central spin.
+        - rhoNV             :: The initial state of the central spin.
+        - Sparse            :: True for using sparse matrices.
+        - meanField         :: True for including a mean-field.  
+        
+    Returns:
+        - The coherence function for a single bath configuration.
+"""
 function pCCECalculation(
     pCCEOrder           :: Int64,
     rDipole             :: Float64,
@@ -959,7 +1094,57 @@ function pCCECalculation(
 end
 
 
+"""
+    Compute(
+        concentration       :: Float64,
+        numP1               :: Int64,
+        rMF                 :: Float64,
+        seed                :: Int64,
+        partitionSize       :: Int64,
+        Species             :: String,
+        pCCEOrder           :: Int64,
+        rDipole             :: Float64,
+        numExtAv            :: Int64,
+        numIntAv            :: Int64,
+        tauMax              :: Float64,
+        points              :: Int64,
+        Omega               :: Float64,
+        Delta               :: Float64,
+        nPulse              :: Int64,
+        LGDriven            :: Dict{Int64, Float64},
+        DrivenLines         :: Dict{Int64, Float64},
+        rhoNV               :: Matrix{Float64},
+        Sparse              :: Bool,
+        meanField           :: Bool
+    )
 
+This function generates a bath configuration and computes the coherence function.
+
+    Parameters:
+        - concentration     :: The concentration of the bath spins.
+        - numP1             :: The number of bath spins.
+        - rMF               :: The radius of the mean-field sphere.
+        - seed              :: A seed for random number generation (set different to 0 for debugging).
+        - partitionSize     :: The size of the partitions in pCCE.
+        - Species           :: The chemical species of the bath spins.
+        - pCCEOrder         :: The order of approximation in the CCE.
+        - rDipole           :: The cutoff distance for considering interactions between bath spins.
+        - numExtAv          :: The number of external mean-field averages.
+        - numIntAv          :: The number of internal mean-field averages.
+        - tauMax            :: The free evolution period duration.
+        - points            :: The number of sampling points for the coherence function.
+        - Omega             :: The Rabi frequency of the bath driving.
+        - Delta             :: The detuning of the bath driving.
+        - nPulse            :: The number of pi-pulses applied to the central spin.
+        - LGDriven          :: A dictionary indicating the resonance lines LG driven.
+        - DrivenLines       :: A dictionary indicating the resonance lines driven.
+        - rhoNV             :: The initial state of the central spin.
+        - Sparse            :: True for sparse matrices.
+        - meanField         :: True for including a mean-field.
+
+    Returns:
+        - The coherence function for a single spatial configuration of the bath.
+ """
 function Compute(
     concentration       :: Float64,
     numP1               :: Int64,
@@ -1002,8 +1187,61 @@ function Compute(
     return signal
 end
 
+"""
+    HahnSignal(
+        pCCEOrder           :: Int64,
+        partitionSize       :: Int64,
+        tauMax              :: Float64,
+        points              :: Int64,
+        K                   :: Int64,
+        concentration       :: Float64,
+        numP1               :: Int64,
+        seed                :: Int64,
+        Species             :: String,
+        numExtAv            :: Int64,
+        numIntAv            :: Int64,
+        rhoNV               :: Matrix{Float64},
+        rDipole             :: Float64,
+        rMF                 :: Float64,
+        nPulse              :: Int64,
+        Sparse              :: Bool,
+        LGDriven            :: Dict{Int64, Float64},
+        DrivenLines         :: Dict{Int64, Float64},
+        meanField           :: Bool,
+        Omega               :: Float64,
+        Delta               :: Float64,
+        ExecuteInCluster    :: Bool
+    )
 
+This function computes the coherence function for a number of different spatial configurations of the spin bath. This is the main function of the program.
 
+    Parameters:
+        - pCCEOrder         :: The order of approximation in the CCE.
+        - partitionSize     :: The size of the partitions in pCCE.
+        - tauMax            :: The free evolution period duration.
+        - points            :: The number of sampling points for the coherence function.
+        - K                 :: The number of spatial configurations considered.
+        - concentration     :: The concentration of the bath spins.
+        - numP1             :: The number of bath spins.
+        - seed              :: A seed for random number generation (set different to 0 for debugging).
+        - Species           :: The chemical species of the bath spins.
+        - numExtAv          :: The number of external mean-field averages.
+        - numIntAv          :: The number of internal mean-field averages.
+        - rhoNV             :: The initial state of the central spin.
+        - rDipole           :: The cutoff distance for considering interactions between bath spins.
+        - rMF               :: The radius of the mean-field sphere.
+        - nPulse            :: The number of pi-pulses applied to the central spin.
+        - Sparse            :: True for sparse matrices.
+        - LGDriven          :: A dictionary indicating the resonance lines LG driven.
+        - DrivenLines       :: A dictionary indicating the resonance lines driven.
+        - meanField         :: True for including a mean-field.
+        - Omega             :: The Rabi frequency of the bath driving.
+        - Delta             :: The detuning of the bath driving.
+        - ExecuteInCluster  :: True if the code is to be executed in an HPC cluster.
+
+    Returns:
+        - The coherence function for a number of spatial configurations of the bath.
+ """
 function HahnSignal(
     pCCEOrder           :: Int64,
     partitionSize       :: Int64,

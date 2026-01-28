@@ -1,0 +1,23 @@
+Possible improvements:
+
+- Define an alias for precision (single and double).
+
+- Add the possibility of starting a CCE3 calculation from the previous CCE2 results: you compute CCE2, you think it is not enough, and decide to explore higher orders: this way you lose less time. Maybe even continue a calculation of some order by checking which labels are missing.
+
+- Create another structure for lattice sites: species, occupancy (true or false) and positions. If a lattice site is occupied, then it cannot be populated again. This is for the case when the lattice generator is called several times, for instance to populate with 13C bath in diamond, or for other systems like hBN.
+
+
+- function buildSpinOperators(
+    # CODE
+) # use ladder operators to do this in a general way. then take this and apply kronecker products.
+
+end
+
+
+TO CHANGE (in MyConstants)
+Lattice constant only for diamond
+Gyromagnetic ratio only for electron
+ 
+Create an input Lattice: this is a string (e.g. "diamond") and sets other parameters; LatConst (Float) and Species (Array)
+
+Change function inputs to optional arguments and that stuff

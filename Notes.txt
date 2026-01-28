@@ -1,0 +1,119 @@
+NECESSARY PACKAGES (if not installed, they will be installed automatically):
+
+    - ArgParse              :: For parsing input arguments from the command line.
+    - Distributed           :: For distributed computing (recommended for heavy calculations).
+    - MKL                   :: For improved performance.
+    - Revise                :: For improved performance.
+    - ProgressMeter         :: For displaying progress bars (local execution only).
+    - Dates                 :: For printing the date of start of the calculation (useful for long calculations).
+    - BenchmarkTools        :: For benchmarking the code.
+    - SlurmClusterManager   :: For setting up the number of workers when executed on a HPC cluster.
+
+    - StaticArrays          :: For improved performance.
+    - StructArrays          :: For improved performance.
+    - SparseArrays          :: For improved performance.
+    - LinearAlgebra         :: For useful functions.
+    - Statistics            :: For useful functions.
+    - Random                :: For random number generation.
+    - Combinatorics         :: For useful functions.
+    - FastExpm              :: For fast exponentiation of sparse matrices.
+    - JuMP                  :: For optimization functions.
+    - GLPK                  :: For optimization functions.
+
+
+INPUT ARGUMENTS (either from command line, which are prioritized, or input file):
+
+    - Species               :: "The chemical species of the spin bath. It is a String object. It can be a nuclear spin (N14, N15, C13, ...) or an electron spin (e). Defult is N15"
+
+    - NumberSpins           :: "The number of bath spins included in the full quantum mechanical simulation. It is an Integer. Default is 180."
+
+    - concentration         :: "The concentration of the bath spins in the lattice in parts per million (ppm). It is a Real. Default is 5ppm."
+
+    - nPulses               :: "The number of pi pulses in the Dynamical Decoupling sequence applied to the central spin. Default is 1. If set to zero, FID is studied."
+
+    - Protocol              :: "The protocol considered. It is a String. Options are: Free; OneToneRes, TwoToneRes, FullToneRes; OneToneLG, TwoToneLG, FullToneLG; TwoToneHyb. Default is Free."
+
+    - Omega                 :: "The Rabi frequency of the bath driving (in MHZ, per tone). Default is 0 (i.e., no bath driving applied)."
+
+    - tauMax                :: "The duration of a single free evolution period (in μs). Default is 100."
+    
+    - numSpatialAv          :: "The number of spatial configurations considered for averaging, i.e., the number of central spins in the ensemble. Set to 1 for single central spin. Default is 50."
+    
+    - meanField             :: "Set to true to include mean-field averaging in the simulation. It is a Bool. Default is true."
+    
+    - numExtAv              :: "The number of EXTERNAL mean-field averages. It is an Integer. Default is 1."
+    
+    - numIntAv              :: "The number of INTERNAL mean-field averages. It is an Integer. Default is 1."
+    
+    - pCCEOrder             :: "The order of approximation in the CCE. It is an Integer. Default is 2."
+    
+    - partitionSize         :: "The number of spins in a partition, i.e., the size of the partitions. It is an Integer. Default is 1 (this is, standard CCE)."
+    
+    - points                :: "The number of sampling points of the coherence signal. It is an Integer. Default is 25."
+            
+    - seed                  :: "The seed for random number generation. It is an Integer. Set to 0 for random numbers, set otherwise for debugging. Default is 0."
+
+    - ExecuteInCluster      :: "True if the program will be executed in a cluster using Slurm, false otherwise (for local execution, for instance). If set to true, no need to set numWorkers, as this will be indicated in Slurm script"
+
+- At some points, this should admit a list of chemical species (for multi-nuclear lattices), with corresponding spin numbers and concentrations. 
+- Protocol input could be changed to two inputs: DrivenLines and LGDriven.
+
+
+
+CUSTOM TYPES
+
+    - Position      :: A struct with fields x, y and z.
+
+    -spinOperators  :: A struct with fields Sx, Sy, Sz (central spin spin operators) and Jx, Jy, Jz (bath spin operators).
+
+    - Spin          :: A struct describing a single bath spin. Fields are:
+
+            - Pos           :: A Position type describing the position of the spin in the lattice.
+            - ID            :: A unique label for the spin.
+            - NucSpin       :: Value of the nuclear spin.
+            - Species       :: The chemical species of the spin.
+            - Partition     :: For pCCE, a label to the partition to which the spin is asigned.
+            - Branch        :: A reference to the resonant frequency of the spin (i.e., the corresponding resonance line).
+            - GyroRatio     :: The gyromagnetic ration of the spin.
+            - Driven        :: True if the spin is being driven, false otherwise.
+            - LGDriven      :: True if the spin is being LG driven, false otherwise. (Can be false when Driven is true but cannot be true is Driven is false).
+
+    - Driving       :: A struct describing a single bath driving tone. Fields are:
+            - Omega         :: The Rabi frequency of the driving, i.e., the power. 
+            - Delta         :: The detuning of the driving.
+            - alpha         :: The angle the driving. For now it does not change a thing as we only consider standard LG.
+            - LG            :: The type of LG driving (LG, FSLG, LG4, ...). For now it only accepts LG.
+
+
+LIST OF FUNCTIONS
+
+    - createSpin            :: Creates an object of type Spin with specific fields.
+    - change_basis          :: Rotates a vector in the basis of (100) diamond to the basis (111) diamond.
+    - generate_position     :: Generates a random position in the lattice for a spin.
+    - lattice_generator     :: Generates a list of bath spins and another of mean-field spins.
+    - constrainedKMeans     :: A Constrained K-Means algorithm to partition the bath spins. 
+    - get_partitions!       :: Assigns a partition to each bath spin by applying contrainedKMeans.
+    - hyperfineNV           :: Computes the interaction vector for an NV (e spin) and another spin.
+    - DipoleDipole          :: Computes the interaction coupling between two bath spins (of similar Larmor frequency).
+    - getSpinOps            :: Generates the spin operators for the central spin and N bath spins.
+    - GetBranches!          :: Assigns a resonance line to each bath spin.
+    - DrivenSpins!          :: Assigns the Driven and LGDriven fields for each spin based on their assigned branch.
+    - getHamiltonian        :: Obtains the Hamiltonian operator for a term in the CCE.
+    - getMFHamiltonian      :: Obtains the mean-field part of the Hamiltonian operator for a term in the CCE.
+    - IntAvSignal           :: Performs the mean-field averaging of a term in the CCE.
+    - pCCECalculation       :: Computes the coherence function of the central spin in the pCCE approximation.
+    - Compute               :: Generates a spin bath and computes the corresponding coherence function.
+    - HahnSignal            :: Computes the coherence signal averages over different spatial configurations.  
+
+HOW TO RUN
+
+    - Inputs from the command line: 
+        - Serial execution:                     julia main.jl --arg1 val1 --arg2 val2
+        - Parallel execution:                   julia -p numWorkers main.jl --arg1 val1 --arg2 val2
+
+    - Inputs from file:
+        - Serial or parallel execution:         julia main.jl
+        - Parallel execution:                   julia -p numWorkers main.jl     
+                                                !! Will overwrite file value for parallelize and numWorkers
+
+    - From VSCode: every input will be taken from the input file.

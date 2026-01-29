@@ -47,7 +47,7 @@ function main()
 
     # Save the figure to current directory
 
-    savefig(p, "./CoherencePlot_pCCE_$(pCCEOrder)_$(partitionSize)_$(Species)_Bath_$(NumberSpins)_Spins_$(round(concentration * 1e6, digits = 2))_ppm_$(nPulses)_CS_pulses_Protocol_$(Protocol)_$(round(Int, Omega * 1e-6))_MHz_$(round(Int, tauMax * 1e6))_us_$(numSpatialAv)_sp_$(numExtAv)_ext_$(numIntAv)_int_seed_$(seed).pdf")
+    savefig(p, "./CoherencePlot.pdf")
 
 end
 

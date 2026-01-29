@@ -5,10 +5,18 @@ The coherence function is calculated using the Partition Cluster Correlation Exp
 
 This is the code used in the manuscript arXiv:2512.06948 (https://doi.org/10.48550/arXiv.2512.06948). 
 
+## Features
+- Coherence calculations up to any order of approximation in the CCE.
+- Fast implementation of the pCCE method written 100% in Julia.
+- Simulation of driven spin bath dynamics.
+- Electron baths, 14N baths and 15N baths can be generated.
+- Mean-field theory for driven spin baths.
+- Adaptation of mean-field theory for LG bath driving.
+
 ## Installation
 1. **Download Julia**
     You can find a guide for downloading and installing Julia at the official website: https://julialang.org
-2. **Clone the repository and move to the correct directory:
+2. **Clone the repository and move to the correct directory:**
     ```bash/zsh
     git clone https://github.com/JGOlivan/UPV-EHU---pCCE.git
     cd pCCE - UPV:EHU
@@ -38,7 +46,7 @@ function main()
 
     # Save the figure to current directory
 
-    savefig(p, "./CoherencePlot_pCCE_$(pCCEOrder)_$(partitionSize)_$(Species)_Bath_$(NumberSpins)_Spins_$(round(concentration * 1e6, digits = 2))_ppm_$(nPulses)_CS_pulses_Protocol_$(Protocol)_$(round(Int, Omega * 1e-6))_MHz_$(round(Int, tauMax * 1e6))_us_$(numSpatialAv)_sp_$(numExtAv)_ext_$(numIntAv)_int_seed_$(seed).pdf")
+    savefig(p, "./CoherencePlot.pdf")
 
 end
 ```
@@ -105,10 +113,10 @@ There are two ways of setting up the parameters for the simulation:
     julia main.jl --help
     ```
 
-You shouls keep in mind that:
+You should keep in mind that:
 
 1. Passing the input arguments directly from the command line takes priority over the input file.
-2. The code can be run in parallel. To do so, start julia as:
+2. The code can be run in parallel. To do so, start Julia as:
     ```bash/zsh
     julia -p numWorkers main.jl
     ```

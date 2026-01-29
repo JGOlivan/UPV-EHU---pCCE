@@ -26,7 +26,7 @@ function createSpin(Pos :: Position{<:Real}, ID :: Int64, Species :: String)
 
 
     NucSpin = Species == "N14" ? 1. : Species == "N15" ? 1/2 : 0.0
-    GyroRatio = Species in ("N14", "N15", "e", "N2") ? ge : 0.0
+    GyroRatio = Species in ("N14", "N15", "e") ? ge : 0.0
     return Spin(Pos, ID, NucSpin, Species, 1, 0, GyroRatio, false, false) # Initialize in partition 1 and branch 0 --> this will change
 end
 

@@ -19,7 +19,7 @@ This is the code used in the manuscript arXiv:2512.06948 (https://doi.org/10.485
 2. **Clone the repository and move to the correct directory:**
     ```bash/zsh
     git clone https://github.com/JGOlivan/UPV-EHU---pCCE.git
-    cd pCCE - UPV:EHU
+    cd UPV-EHU---pCCE
     ```
 
 ## Usage 

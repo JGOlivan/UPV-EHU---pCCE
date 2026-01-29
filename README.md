@@ -1,6 +1,8 @@
 # Driven Spin Bath Coherence Simulation
 This is a code for simulating the coherence of a central spin surrounded by a spin bath in solid-state. The code is focused on simulating the spin coherence decay of an NV center in diamond surrounded by a bath of P1 centers. The spin bath can be driven. Some functions could be used for other purposes.  
 
+The coherence function is calculated using the Partition Cluster Correlation Expansion method proposed in Phys. Rev. B 110, L220302 (https://doi.org/10.1103/PhysRevB.110.L220302). Their code can be found at: https://github.com/walter-hahn/pCCE-FraunhoferIAF.
+
 This is the code used in the manuscript arXiv:2512.06948 (https://doi.org/10.48550/arXiv.2512.06948). 
 
 ## Installation

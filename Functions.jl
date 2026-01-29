@@ -1242,29 +1242,26 @@ This function computes the coherence function for a number of different spatial 
     Returns:
         - The coherence function for a number of spatial configurations of the bath.
  """
-function HahnSignal(
-    pCCEOrder           :: Int64,
-    partitionSize       :: Int64,
-    tauMax              :: Float64,
-    points              :: Int64,
-    K                   :: Int64,
-    concentration       :: Float64,
-    numP1               :: Int64,
-    seed                :: Int64,
-    Species             :: String,
-    numExtAv            :: Int64,
-    numIntAv            :: Int64,
-    rhoNV               :: Matrix{Float64},
-    rDipole             :: Float64,
-    rMF                 :: Float64,
-    nPulse              :: Int64,
-    Sparse              :: Bool,
-    LGDriven            :: Dict{Int64, Float64},
-    DrivenLines         :: Dict{Int64, Float64},
-    meanField           :: Bool,
-    Omega               :: Float64,
-    Delta               :: Float64,
-    ExecuteInCluster    :: Bool
+function HahnSignal(rhoNV :: Matrix{Float64}, rDipole :: Float64, rMF :: Float64;
+    pCCEOrder           :: Int64                    = 2,
+    partitionSize       :: Int64                    = 1,
+    tauMax              :: Float64                  = 30e-6,
+    points              :: Int64                    = 25,
+    K                   :: Int64                    = 100,
+    concentration       :: Float64                  = 5e-6,
+    numP1               :: Int64                    = 180,
+    seed                :: Int64                    = 0,
+    Species             :: String                   = "N15",
+    numExtAv            :: Int64                    = 1,
+    numIntAv            :: Int64                    = 100,
+    nPulse              :: Int64                    = 1,
+    Sparse              :: Bool                     = false,
+    LGDriven            :: Dict{Int64, Float64}     = Dict(i => 0.0 for i in 1:7),
+    DrivenLines         :: Dict{Int64, Float64}     = Dict(i => 0.0 for i in 1:7),
+    meanField           :: Bool                     = true,
+    Omega               :: Float64                  = 0.0,
+    Delta               :: Float64                  = 0.0,
+    ExecuteInCluster    :: Bool                     = false
 )
 
     if size(workers(), 1) > 1

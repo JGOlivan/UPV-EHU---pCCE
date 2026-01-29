@@ -22,7 +22,9 @@ function main()
 
     # Get coherence function for given input:
 
-    coherences = HahnSignal(pCCEOrder, partitionSize, tauMax, points, numSpatialAv, concentration, NumberSpins, seed, Species, numExtAv, numIntAv, rhoCS, rDipole, rMF, nPulses, Sparse, LGDriven, DrivenLines, meanField, Omega, Delta, ExecuteInCluster) # Returns a vector of coherence functions for different spatial configurations of the bath.
+    coherences = HahnSignal(rhoCS, rDipole, rMF; K = numSpatialAv, numP1 = NumberSpins, seed = seed, numIntAv = numIntAv) 
+    # Returns a vector of coherence functions for different spatial configurations of the bath.
+    # The function can accept more arguments. If not indicated, they take a default value.
 
     coherence = mean(coherences) # Average over the coherence for each spatial configuration.
 
@@ -104,10 +106,11 @@ There are two ways of setting up the parameters for the simulation:
     ```
 
 You shouls keep in mind that:
-    1. Passing the input arguments directly from the command line takes priority over the input file. 
-    2. The code can be run in parallel. To do so, start julia as:
-        ```bash/zsh
-        julia -p numWorkers main.jl
-        ```
+
+1. Passing the input arguments directly from the command line takes priority over the input file.
+2. The code can be run in parallel. To do so, start julia as:
+    ```bash/zsh
+    julia -p numWorkers main.jl
+    ```
         Your numWorkers should not exceed the number of cores of your machine.
-    3. The code can be run in an HPC (High Performance Computing) cluster that uses SLURM.
+3. The code can be run in an HPC (High Performance Computing) cluster that uses SLURM.

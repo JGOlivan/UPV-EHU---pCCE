@@ -33,7 +33,9 @@ function main()
 
     # Get coherence function for given input:
 
-    coherences = HahnSignal(pCCEOrder, partitionSize, tauMax, points, numSpatialAv, concentration, NumberSpins, seed, Species, numExtAv, numIntAv, rhoCS, rDipole, rMF, nPulses, Sparse, LGDriven, DrivenLines, meanField, Omega, Delta, ExecuteInCluster)
+    coherences = HahnSignal(rhoCS, rDipole, rMF; K = numSpatialAv, numP1 = NumberSpins, seed = seed, numIntAv = numIntAv) 
+    # Returns a vector of coherence functions for different spatial configurations of the bath.
+    # The function can accept more arguments. If not indicated, they take a default value.
 
     coherence = mean(coherences) # average over the coherence for each spatial configuration
 

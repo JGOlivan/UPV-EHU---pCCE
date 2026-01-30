@@ -263,7 +263,7 @@ function summary()
     println("Number of π-pulses in the DD sequence:         $(nPulses == 0 ? "No DD sequence considered." : nPulses).")
     println(" ")
 
-    println("Bath driving protocol:                         $(Protocol == "Free" ? "None" : Procol);")
+    println("Bath driving protocol:                         $(Protocol == "Free" ? "None" : Protocol);")
     println("Rabi frequency of the driving:                 $(round(Int, Omega * 1e-6)) MHz;")
     println("Lines driven resonant driving:                 $(DrivenLines);")
     println("Lines driven with LG driving:                  $(LGDriven).")

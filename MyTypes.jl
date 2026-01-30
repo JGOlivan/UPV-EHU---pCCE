@@ -24,17 +24,20 @@ module MyTypes
     """
         spinOperators{T <: AbstractArray}
 
-        A struct with fields Sx, Sy, Sz (central spin operators) and Jx, Jy, Jz (bath spin operators).
+        A struct with fields Sx, Sy, Sz (central spin operators), Jx, Jy, Jz (bath spin operators), Ident (Identity matrix) and sz (z spin operator for a central spin in a reduced subspace; for the particular case of the NV).
     """
-    struct spinOperators{T <: AbstractArray}
+    struct spinOperators{T <: AbstractArray, D <: AbstractArray}
 
-        Sx :: T 
-        Sy :: T                 # Central spin operators.
-        Sz :: T
+        Sx      :: T 
+        Sy      :: T                 # Central spin operators.
+        Sz      :: T
 
-        Jx :: Vector{T}
-        Jy :: Vector{T}         # Bath spin operators.
-        Jz :: Vector{T}
+        Jx      :: Vector{T}
+        Jy      :: Vector{T}         # Bath spin operators.
+        Jz      :: Vector{T}
+
+        Ident   :: D                 # Identity operator
+        sz      :: T                 # NV subspace z-operator
 
     end
 
@@ -51,18 +54,24 @@ module MyTypes
             - GyroRatio     :: The gyromagnetic ration of the spin.
             - Driven        :: True if the spin is being driven, false otherwise.
             - LGDriven      :: True if the spin is being LG driven, false otherwise. (Can be false when Driven is true but cannot be true is Driven is false).
+            - Ax            :: The x-component of the interaction vector with the central spin.
+            - Ay            :: The y-component of the interaction vector with the central spin.
+            - Az            :: The z-component of the interaction vector with the central spin.
     """
-    mutable struct Spin{S <: AbstractString, P <: Position{<: Real}}
+    mutable struct Spin{S <: AbstractString, P <: Position{<: Real}, F <: Real}
 
         Pos         :: P            
         ID          :: Int64        
-        NucSpin     :: Float64      
+        NucSpin     :: F      
         Species     :: S            
         Partition   :: Int64        
         Branch      :: Int64        
-        GyroRatio   :: Float64      
+        GyroRatio   :: F      
         Driven      :: Bool         
-        LGDriven    :: Bool         
+        LGDriven    :: Bool  
+        Ax          :: F
+        Ay          :: F  
+        Az          :: F
 
     end
 

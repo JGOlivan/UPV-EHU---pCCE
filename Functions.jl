@@ -10,6 +10,55 @@ export HahnSignal
 using StructArrays, SparseArrays, LinearAlgebra, Statistics, Random, Combinatorics, FastExpm, JuMP, Distributed, ProgressMeter, GLPK
 
 """
+    hyperfineNV(r :: Position{<:Real}, GyroRatio :: Float64)
+
+Computes the interaction vector betweem an NV center (or a simple e spin) and another spin (nuclear or electron).
+
+    Parameters:
+        - r             :: the position of the spin with respect to the NV center
+        - GyroRatio     :: the gyromagnetic ratio of the spin
+
+    Returns:
+        - the components of the interaction vector Ax, Ay, Az.
+"""
+function hyperfineNV(r :: Position{<:Real}, GyroRatio :: Float64)
+
+    G = ge * GyroRatio * mu0 * hbar / 2.0
+
+    Ax = G / (norm(r)^3) * (-3 * (r.x * r.z) / norm(r)^2)
+    Ay = G / (norm(r)^3) * (-3 * (r.y * r.z) / norm(r)^2)
+    Az = G / (norm(r)^3) * (1 - 3 * (r.z * r.z) / norm(r)^2)
+    
+    return Ax, Ay, Az
+
+end
+
+
+
+"""
+    DipoleDipole(r :: Position{Float64}, GyroRatio1 :: Float64, GyroRatio2 :: Float64)
+
+Computes the interaction strength between two bath spins with similar Larmor frequency.
+
+    Parameters:
+        - r             :: the relative vector connecting the two spins
+        - GyroRatio1    :: the gyromagnetic ratio of the first spin.
+        - GyroRatio2    :: the gyromagnetic ratio of the second spin.
+
+    Returs:
+        - the interaction coupling C.
+"""
+function DipoleDipole(r :: Position{Float64}, GyroRatio1 :: Float64, GyroRatio2 :: Float64)
+
+
+    G = GyroRatio1 * GyroRatio2 * mu0 * hbar / 2.0
+
+    return G / norm(r)^3 * (1 - 3 * (r.z * r.z) / norm(r)^2)
+end
+
+
+
+"""
     createSpin(Pos :: Position{<:Real}, ID :: Int64, Species :: String)
 
 Create a Spin object with some position in the lattice and some chemical species assigned.
@@ -24,10 +73,11 @@ Create a Spin object with some position in the lattice and some chemical species
 """
 function createSpin(Pos :: Position{<:Real}, ID :: Int64, Species :: String)
 
-
     NucSpin = Species == "N14" ? 1. : Species == "N15" ? 1/2 : 0.0
     GyroRatio = Species in ("N14", "N15", "e") ? ge : 0.0
-    return Spin(Pos, ID, NucSpin, Species, 1, 0, GyroRatio, false, false) # Initialize in partition 1 and branch 0 --> this will change
+    Ax, Ay, Az = hyperfineNV(Pos * a, GyroRatio)
+
+    return Spin(Pos, ID, NucSpin, Species, 1, 0, GyroRatio, false, false, Ax, Ay, Az) # Initialize in partition 1 and branch 0 --> this will change later in the code
 end
 
 
@@ -382,55 +432,6 @@ end
 
 
 
-"""
-    hyperfineNV(r :: Position{<:Real}, GyroRatio :: Float64)
-
-Computes the interaction vector betweem an NV center (or a simple e spin) and another spin (nuclear or electron).
-
-    Parameters:
-        - r             :: the position of the spin with respect to the NV center
-        - GyroRatio     :: the gyromagnetic ratio of the spin
-
-    Returns:
-        - the components of the interaction vector Ax, Ay, Az.
-"""
-function hyperfineNV(r :: Position{<:Real}, GyroRatio :: Float64)
-
-    G = ge * GyroRatio * mu0 * hbar / 2.0
-
-    Ax = G / (norm(r)^3) * (-3 * (r.x * r.z) / norm(r)^2)
-    Ay = G / (norm(r)^3) * (-3 * (r.y * r.z) / norm(r)^2)
-    Az = G / (norm(r)^3) * (1 - 3 * (r.z * r.z) / norm(r)^2)
-    
-    return Ax, Ay, Az
-
-end
-
-
-
-"""
-    DipoleDipole(r :: Position{Float64}, GyroRatio1 :: Float64, GyroRatio2 :: Float64)
-
-Computes the interaction strength between two bath spins with similar Larmor frequency.
-
-    Parameters:
-        - r             :: the relative vector connecting the two spins
-        - GyroRatio1    :: the gyromagnetic ratio of the first spin.
-        - GyroRatio2    :: the gyromagnetic ratio of the second spin.
-
-    Returs:
-        - the interaction coupling C.
-"""
-function DipoleDipole(r :: Position{Float64}, GyroRatio1 :: Float64, GyroRatio2 :: Float64)
-
-
-    G = GyroRatio1 * GyroRatio2 * mu0 * hbar / 2.0
-
-    return G / norm(r)^3 * (1 - 3 * (r.z * r.z) / norm(r)^2)
-end
-
-
-
 """ 
     getSpinOps(N :: Int64, Sparse :: Bool)
 Obtain NV and P1 spin operators for a (1 + N) spin system
@@ -445,7 +446,7 @@ function getSpinOps(N :: Int64, Sparse :: Bool)
         sigmax, sigmay, sigmaz = sparse(sigmax), sparse(sigmay), sparse(sigmaz)
     end
 
-    identityMat = Sparse ? sparse(1.0I(2^N)) : 1.0I(2^N)
+    identityMat = Sparse ? sparse(1.0I(2^N)) : 1.0I(2^N) # for bath space
 
     # NV Electron Spin operators
 
@@ -475,7 +476,10 @@ function getSpinOps(N :: Int64, Sparse :: Bool)
         Jz[i] = kron(kron(kron(NV, L), 0.5 * sigmaz), R)
     end
 
-    return spinOperators(Sx, Sy, Sz, Jx, Jy, Jz)
+    Ident = Sparse ? sparse(I(2*2^N)) : 1.0I(2*2^N)
+    sz = (Sz + Ident) / 2 # we select the {|0>, |1>} NV subspace
+
+    return spinOperators(Sx, Sy, Sz, Jx, Jy, Jz, Ident, sz)
 end
 
 
@@ -621,7 +625,6 @@ function getHamiltonian(
     indices             :: Vector{Int64},
     D                   :: Driving{Float64, String},
     rDipole             :: Float64,
-    Sparse              :: Bool,
     spinOps             :: spinOperators,
     bathSpins           :: StructArray
 )
@@ -632,8 +635,6 @@ function getHamiltonian(
     LG = D.LG
 
     Sz, Jx, Jy, Jz = spinOps.Sz, spinOps.Jx, spinOps.Jy, spinOps.Jz
-
-    one = Sparse ? sparse(I, size(Sz)...) : Matrix{ComplexF64}(I, size(Sz)...)
 
     HP1   = spzeros(ComplexF64, size(Sz)...)
     HNV   = spzeros(ComplexF64, size(Sz)...)
@@ -651,27 +652,29 @@ function getHamiltonian(
 
         partitionSize = size(partitionIDs, 1)
 
-        HP1Partition   = spzeros(ComplexF64, size(Sz)...)
-        HNVPartition   = spzeros(ComplexF64, size(Sz)...)
-        HP1P1Partition = spzeros(ComplexF64, size(Sz)...)
-        H12Partition   = spzeros(ComplexF64, size(Sz)...)
-        HAPartition    = spzeros(ComplexF64, size(Sz)...)
-        HBPartition    = spzeros(ComplexF64, size(Sz)...)
-
         for (s, id) in enumerate(partitionIDs)
 
             JXs = Jx[startIdx + s]
             JYs = Jy[startIdx + s]
             JZs = Jz[startIdx + s]
 
-            HP1Partition    += bathSpins.LGDriven[id] * Delta * JZs
-            HAPartition     += bathSpins.Driven[id] * Omega * (sin(alpha) * JXs + cos(alpha) * JYs)
+            HP1    += bathSpins.LGDriven[id] * Delta * JZs
+            HA     += bathSpins.Driven[id] * Omega * (sin(alpha) * JXs + cos(alpha) * JYs)
 
-            if LG == "LG4" HBPartition     += bathSpins.Driven[id] * Omega * (sin(-alpha) * JXs + cos(-alpha) * JYs); end
+            if LG == "LG4" HB += bathSpins.Driven[id] * Omega * (sin(-alpha) * JXs + cos(-alpha) * JYs); end
 
-            _, _, Az = hyperfineNV(bathSpins.Pos[id] * a, bathSpins.GyroRatio[id])
+            HNV += bathSpins.Az[id] * spinOps.sz * JZs
 
-            HNVPartition += Az * (Sz + one) / 2 * JZs
+            #########
+
+            #for idx2 in filter(x -> x != idx && x > idx, indices)
+            #    mask2 = bathSpins.Partition .== idx2
+
+            #    partitionIDs2 = 
+
+
+
+            #########
 
             for r in 1:(s - 1) # Intra partition interactions
 
@@ -688,7 +691,7 @@ function getHamiltonian(
                     continue # Two adjacent P1 centres (dist < bond length) will create a different kind of defect
                 end
 
-                HP1P1Partition += C12 * (JZs * JZr - (bathSpins.Branch[id] == bathSpins.Branch[id2] ? 0.5 : 0.0) * (JXs * JXr + JYs * JYr))
+                HP1P1 += C12 * (JZs * JZr - (bathSpins.Branch[id] == bathSpins.Branch[id2] ? 0.5 : 0.0) * (JXs * JXr + JYs * JYr))
 
             end
 
@@ -715,19 +718,12 @@ function getHamiltonian(
 
                     C12 = DipoleDipole(r12 * a, bathSpins.GyroRatio[id], bathSpins.GyroRatio[id2])
 
-                    H12Partition += C12 * (JZs * JZu - (bathSpins.Branch[id] == bathSpins.Branch[id2] ? 0.5 : 0.0) * (JXs * JXu + JYs * JYu))
+                    H12 += C12 * (JZs * JZu - (bathSpins.Branch[id] == bathSpins.Branch[id2] ? 0.5 : 0.0) * (JXs * JXu + JYs * JYu))
 
                 end
                 startIdx2 += partitionSize2
             end
         end
-
-        HP1     += HP1Partition
-        HNV     += HNVPartition
-        HP1P1   += HP1P1Partition
-        HA      += HAPartition
-        HB      += HBPartition
-        H12     += H12Partition
 
         startIdx += partitionSize
     end
@@ -947,11 +943,11 @@ function IntAvSignal(
 
     U0 = sparse(fastExpm(-im * 2*pi * H * timeVec[2]; threshold = 1e-6)) 
 
-    U = 1.0I(size(U0, 1))
+    U = spinOps.Ident
     sig = zeros(length(timeVec))
 
     for i in eachindex(timeVec)
-        nPulse == 0 ? U1 = U * U : U1 = (U * ux * U)^nPulse
+        nPulse == 0 ? U1 = U : U1 = (U * ux * U)^nPulse
         sig[i] += real(tr(U1 * rho0 * U1' * spinOps.Sx))
         U = U0 * U
     end
@@ -982,6 +978,7 @@ This function computes the coherence function for a single bath configuration.
 
     Parameters:
         - pCCEOrder         :: The order of approximation in the CCE.
+        - partitionSize     :: The size of the partitions in pCCE.
         - rDipole           :: The cutoff distance for considering interactions between bath spins.
         - numExtAv          :: The number of external mean-field averages.        
         - numIntAv          :: The number of internal mean-field averages.  
@@ -1000,6 +997,7 @@ This function computes the coherence function for a single bath configuration.
 """
 function pCCECalculation(
     pCCEOrder           :: Int64,
+    partitionSize       :: Int64,
     rDipole             :: Float64,
     numExtAv            :: Int64,
     numIntAv            :: Int64,
@@ -1019,7 +1017,6 @@ function pCCECalculation(
 
     numPartitions = maximum(bathSpins.Partition)
 
-    identityFunc(n) = Sparse ? sparse(I(2*2^n)) : 1.0I(2*2^n)
     rho0P1(n) = Sparse ? sparse(1/2^n * I(2^n)) : (1/2^n) * 1.0I(2^n)
 
     mfStates = zeros(mfSpins.ID[end])
@@ -1030,16 +1027,24 @@ function pCCECalculation(
 
         fill!(signal, 1.0)
 
-        prevSignal = ones(points, numPartitions)
-        prevLabels = Vector{Vector{Int64}}()
+        #prevSignal = ones(points, numPartitions)
+        AllSignals = Vector{Vector{Float64}}() # Every irreducible term of CCE
+        AllLabels = Vector{Vector{Int64}}() # Every irreducible term label
 
         for order in 1:pCCEOrder
 
+            @show order
+
             indices = GetIndices(order, numPartitions)
+            @show indices
             numContributions = length(indices)
 
-            Labels = [zeros(Int64, order) for _ in 1:numContributions]
-            Signal = [zeros(Float64, points) for _ in 1:numContributions]
+            Signal = [zeros(Float64, points) for _ in 1:numContributions] # Irreducible terms for some order
+            Labels = [zeros(Int64, order) for _ in 1:numContributions] # Labels for irrducible terms for some order
+
+            dim = order * partitionSize
+            spinOps = getSpinOps(dim, Sparse)
+            rho0 = kron(rhoNV, rho0P1(dim))
 
             for (counter, index) in enumerate(indices)
 
@@ -1047,11 +1052,9 @@ function pCCECalculation(
                 totalSize = length(bathSpins.Partition[mask])
                 totalPositions = bathSpins.Pos[mask]
 
-                spinOps = getSpinOps(totalSize, Sparse)
                 ux = -im * spinOps.Sx
-                rho0 = kron(rhoNV, rho0P1(totalSize))
 
-                HP1, HNV, HP1P1, HA, HB, H12 = getHamiltonian(index, D, rDipole, Sparse, spinOps, bathSpins)
+                HP1, HNV, HP1P1, HA, HB, H12 = getHamiltonian(index, D, rDipole, spinOps, bathSpins)
 
                 H0 = HP1 + HNV + HP1P1 + H12 + HA + HB
 
@@ -1065,9 +1068,9 @@ function pCCECalculation(
 
                 if order > 1
 
-                    prevSignalIndices = findall(lab -> lab in combinations(index, order-1), prevLabels)
+                    LowerLabels = findall(lab -> lab in collect(powerset(index, 1, order)), AllLabels) # Labels of lower order irreducible terms in the denominator
 
-                    denominator = prod(prevSignal[:, prevSignalIndices], dims = 2)
+                    denominator = prod(reduce(hcat, AllSignals[LowerLabels]), dims = 2)
 
                     Signal[counter] .= sig ./ vec(denominator)
 
@@ -1078,13 +1081,15 @@ function pCCECalculation(
                 Labels[counter] = index
             end
 
-            if !isempty(Signal)
+            if !isempty(Signal) # this part is fine
                 newSignals = reduce(hcat, Signal)
                 signal .*= prod(newSignals, dims = 2)
             end
+        
+            append!(AllSignals, Signal)
+            append!(AllLabels, Labels)
 
-            prevSignal = newSignals
-            prevLabels = Labels
+            @show AllLabels
         end
 
         averagedSignal .+= signal
@@ -1182,7 +1187,7 @@ function Compute(
 
     D                   = Driving(Omega, Delta, 0.0, "LG")
 
-    signal              = pCCECalculation(pCCEOrder, rDipole, numExtAv, numIntAv, bathSpins, mfSpins, tauMax, points, D, nPulse, rhoNV, Sparse, meanField)
+    signal              = pCCECalculation(pCCEOrder, partitionSize, rDipole, numExtAv, numIntAv, bathSpins, mfSpins, tauMax, points, D, nPulse, rhoNV, Sparse, meanField)
 
     return signal
 end

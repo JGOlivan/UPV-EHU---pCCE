@@ -1,7 +1,7 @@
 include("PkgInstallation.jl")
 
 include("Libraries.jl") # useful libraries that will only work in main.jl
-include("Setup.jl")
+include("Config.jl")
 
 if ExecuteInCluster 
     addprocs(SlurmManager())
@@ -33,7 +33,7 @@ function main()
 
     # Get coherence function for given input:
 
-    coherences = HahnSignal(rhoCS, rDipole, rMF; K = numSpatialAv, numP1 = NumberSpins, seed = seed, numIntAv = numIntAv) 
+    coherences = HahnSignal(rhoCS, rDipole, rMF; K = numSpatialAv, numP1 = NumberSpins, seed = seed, numIntAv = numIntAv, Omega = Omega, Delta = Delta, pCCEOrder, partitionSize) 
     # Returns a vector of coherence functions for different spatial configurations of the bath.
     # The function can accept more arguments. If not indicated, they take a default value.
 

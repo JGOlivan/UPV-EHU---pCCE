@@ -304,6 +304,7 @@ else
     input_args = parse_command_line()
     params = (; input_args...)
     (; Species, NumberSpins, concentration, nPulses, Protocol, Omega, tauMax, numSpatialAv, meanField, numExtAv, numIntAv, pCCEOrder, partitionSize, points, ExecuteInCluster, seed) = params
+    parallelize = size(workers(), 1) > 1 ? true : false
 end
 
 if ExecuteInCluster numWorkers = 1; end

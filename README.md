@@ -97,7 +97,7 @@ There are two ways of setting up the parameters for the simulation:
     seed                :: Int64    = 0         # seed for random number generation
     ```
 
-    After modifying the input file, you should run:
+    Note that an input file already exists (Input.jl) and you do not need to modify it to run the code: default values are already given. You can modify it for a custom simulation. After that, you should run:
     ```bash/zsh
     julia main.jl
     ```

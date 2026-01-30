@@ -1033,10 +1033,8 @@ function pCCECalculation(
 
         for order in 1:pCCEOrder
 
-            @show order
 
             indices = GetIndices(order, numPartitions)
-            @show indices
             numContributions = length(indices)
 
             Signal = [zeros(Float64, points) for _ in 1:numContributions] # Irreducible terms for some order
@@ -1089,7 +1087,6 @@ function pCCECalculation(
             append!(AllSignals, Signal)
             append!(AllLabels, Labels)
 
-            @show AllLabels
         end
 
         averagedSignal .+= signal

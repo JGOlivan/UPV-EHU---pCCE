@@ -1,0 +1,25 @@
+** Code Questions / Suggestions **
+
+Line 1038 -- Does this assume that all spins are coupled and so find all the possible combinations of spins for a paritcular order Nspins-C-nOrder? And then in the Hamiltonian you cut out couplings of a certain strength?
+
+Line 1050 -- Why do you generate the spin operators for each index? Would it be more efficient to just generate it once for each pCCE order?
+
+Line 950 -- You re-calculate the idenitity here. Would it be better to use the one you have in Line 1022?
+
+Line 954 -- Be careful. Free evolution is now 2tau and I don't think this is communicated anywhere. Although you may have done this as I haven't checked thoroughly...
+
+Line 674 -- Why not calculate this once? It is repeated a lot and it is a constant throughout the code right?
+
+Line 654 -- Do you need to create HP1 and HP1Parition? You add terms to HP1Partition and then add HP1Parition to HP1, but this is the same as just adding to only HP1 right? May help with memory. Same with Line 780.
+
+Line 695 -- This is something you may need to explain to me. Why do you need to generate the inter and intra parition couplins separately? Surely the Hamiltonian does not treat these any differently? You create two "masks", but can't you do this before and merge them to create one effective parition from the two separate ones?
+
+
+
+** Suggested Additions **
+
+getMFHamiltonian() -- Here you can only cope with two specific cases of detuning, namely Resonant and LG. It might be better to use the formulas you have in the paper for a general detuning, e.g. instead of putting 1 / sqrt(3) using the cos and sin . For example in Driven spins, you could just assign a Delta and Omega (and alpha) instead of 1 or 0.
+
+getBranches!() -- I think there is a more efficient way of doing this. Rather than using for loops which may add a little bit of overhead time, the function sample(choices,weights,Num) can generate the branches with weighting.
+
+Setup.jl -- I think it is more standard to include PkgInstallation here rather than main. Then the user would just run the setup.jl once, for first time use, and the code doesn't have to search for packages each time -adding overhead to the code.

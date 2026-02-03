@@ -45,7 +45,10 @@ if !Version
                     "Combinatorics",
                     "FastExpm",
                     "JuMP",
-                    "GLPK"
+                    "GLPK",
+
+                    "Plots",
+                    "LaTeXStrings"
                 ]
 
 else
@@ -71,7 +74,10 @@ else
                     "Combinatorics" => "1.1.0",
                     "FastExpm" => "1.1.0",
                     "JuMP" => "1.29.3",
-                    "GLPK" => "1.2.1"
+                    "GLPK" => "1.2.1",
+
+                    "Plots" => "1.41.3",
+                    "LaTeXStrings" => "1.4.0"
     )
 
 end

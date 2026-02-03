@@ -39,6 +39,8 @@ module MyTypes
         Ident   :: D                 # Identity operator
         sz      :: T                 # NV subspace z-operator
 
+        Upi      :: T                # pi-pulse operator
+
     end
 
     """

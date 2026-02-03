@@ -6,4 +6,4 @@ using ArgParse, Distributed, MKL, Revise, ProgressMeter, Dates, BenchmarkTools, 
 using SlurmClusterManager # only for HPC cluster usage
 
 using Plots
-using LaTeXStrings  # for writting LaTeX stuff (i think only for plotting)
+using LaTeXStrings

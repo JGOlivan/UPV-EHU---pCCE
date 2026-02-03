@@ -29,23 +29,18 @@ The file main.jl contains a function main() where the code for performing the si
 function main()
 
     # Get coherence function for given input:
-
     coherences = HahnSignal(rhoCS, rDipole, rMF; K = numSpatialAv, numP1 = NumberSpins, seed = seed, numIntAv = numIntAv) 
     # Returns a vector of coherence functions for different spatial configurations of the bath.
     # The function can accept more arguments. If not indicated, they take a default value.
 
     coherence = mean(coherences) # Average over the coherence for each spatial configuration.
 
-
     # Plot coherence function:
-
     tauVec = LinRange(0, 2 * tauMax * 1e6, points)
 
     p = plot(tauVec, coherence, grid = false, framestyle = :box, legend = false, lw = 3, xlabel = L"2\tau \ (\mu s)", ylabel = L"\langle S_x \rangle", tickfont = (9, "Times New Roman"), color = :darkred, minorticks = true)
 
-
     # Save the figure to current directory
-
     savefig(p, "./CoherencePlot.pdf")
 
 end
@@ -116,9 +111,9 @@ There are two ways of setting up the parameters for the simulation:
 You should keep in mind that:
 
 1. Passing the input arguments directly from the command line takes priority over the input file.
-2. The code can be run in parallel. To do so, start Julia as:
+2. The code can be run in parallel. To do so, start Julia from the command line as:
     ```bash/zsh
     julia -p numWorkers main.jl
     ```
-        Your numWorkers should not exceed the number of cores of your machine.
+    Your numWorkers should not exceed the number of cores of your machine. If you are going to use the input file, this step can be skipped. If not, the parameters 'paralellize' and 'numWorkers' will be overwritten.
 3. The code can be run in an HPC (High Performance Computing) cluster that uses SLURM.

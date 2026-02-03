@@ -479,7 +479,9 @@ function getSpinOps(N :: Int64, Sparse :: Bool)
     Ident = Sparse ? sparse(I(2*2^N)) : 1.0I(2*2^N)
     sz = (Sz + Ident) / 2 # we select the {|0>, |1>} NV subspace
 
-    return spinOperators(Sx, Sy, Sz, Jx, Jy, Jz, Ident, sz)
+    Upi = -im * Sx
+
+    return spinOperators(Sx, Sy, Sz, Jx, Jy, Jz, Ident, sz, Upi)
 end
 
 
@@ -626,7 +628,8 @@ function getHamiltonian(
     D                   :: Driving{Float64, String},
     rDipole             :: Float64,
     spinOps             :: spinOperators,
-    bathSpins           :: StructArray
+    bathSpins           :: StructArray,
+    mask                :: BitVector
 )
 
     alpha = D.alpha
@@ -643,89 +646,42 @@ function getHamiltonian(
     HA    = spzeros(ComplexF64, size(Sz)...)
     HB    = spzeros(ComplexF64, size(Sz)...)
 
-    startIdx = 0
+    #mask = zeros(Bool, length(bathSpins.ID))
 
-    for idx in sort(indices)
+    #for idx in sort(indices) mask .+= (bathSpins.Partition .== idx); end
 
-        mask = bathSpins.Partition .== idx
-        partitionIDs = bathSpins.ID[mask]
+    partitionIDs = bathSpins.ID[mask]
+    partitionSize = size(partitionIDs, 1)
 
-        partitionSize = size(partitionIDs, 1)
+    partitionIDs = sort(partitionIDs, rev = false)
 
-        for (s, id) in enumerate(partitionIDs)
+    for (s, id) in enumerate(partitionIDs)
 
-            JXs = Jx[startIdx + s]
-            JYs = Jy[startIdx + s]
-            JZs = Jz[startIdx + s]
+        JXs = Jx[s]
+        JYs = Jy[s]
+        JZs = Jz[s]
 
-            HP1    += bathSpins.LGDriven[id] * Delta * JZs
-            HA     += bathSpins.Driven[id] * Omega * (sin(alpha) * JXs + cos(alpha) * JYs)
+        HP1 += bathSpins.LGDriven[id] * Delta * JZs
+        HA += bathSpins.Driven[id] * Omega * (sin(alpha) * JXs + cos(alpha) * JYs)
 
-            if LG == "LG4" HB += bathSpins.Driven[id] * Omega * (sin(-alpha) * JXs + cos(-alpha) * JYs); end
+        if LG == "LG4" HB += bathSpins.Driven[id] * Omega * (sin(-alpha) * JXs + cos(-alpha) * JYs); end
 
-            HNV += bathSpins.Az[id] * spinOps.sz * JZs
+        HNV += bathSpins.Az[id] * spinOps.sz * JZs
 
-            #########
+        for r in 1:(s-1)
+            id2 = partitionIDs[r]
+            
+            JXr = Jx[r]
+            JYr = Jy[r]
+            JZr = Jz[r]
 
-            #for idx2 in filter(x -> x != idx && x > idx, indices)
-            #    mask2 = bathSpins.Partition .== idx2
+            r12 = bathSpins.Pos[id] - bathSpins.Pos[id2]
+            C12 = DipoleDipole(r12 * a, bathSpins.GyroRatio[id], bathSpins.GyroRatio[id2])
 
-            #    partitionIDs2 = 
+            if norm(r12 * a) < (1.5 * 1.54e-10) || norm(r12 * a) > rDipole continue; end # i) Two adjacent P1 centres (dist < bond length) will create a different kind of defect. ii) Interaction between two P1 centres separated further than the dipole radius are considered to be suppressed.
 
-
-
-            #########
-
-            for r in 1:(s - 1) # Intra partition interactions
-
-                id2 = partitionIDs[r]
-
-                JXr = Jx[startIdx + r]
-                JYr = Jy[startIdx + r]
-                JZr = Jz[startIdx + r]
-
-                r12 = bathSpins.Pos[id] - bathSpins.Pos[id2]
-                C12 = DipoleDipole(r12 * a, bathSpins.GyroRatio[id], bathSpins.GyroRatio[id2]) # Positions are given in lattice constant units. This could be different for lattices other than diamond
-
-                if norm(r12 * a) < (1.5 * 1.54e-10) 
-                    continue # Two adjacent P1 centres (dist < bond length) will create a different kind of defect
-                end
-
-                HP1P1 += C12 * (JZs * JZr - (bathSpins.Branch[id] == bathSpins.Branch[id2] ? 0.5 : 0.0) * (JXs * JXr + JYs * JYr))
-
-            end
-
-            # Include inter-partition interactions
-
-            startIdx2 = partitionSize
-
-            for idx2 in filter(x -> x != idx && x > idx, indices)
-
-                mask2 = bathSpins.Partition .== idx2
-
-                partitionIDs2 = bathSpins.ID[mask2]
-                partitionSize2 = size(partitionIDs2, 1)
-
-                for (u, id2) in enumerate(partitionIDs2)
-
-                    JXu = Jx[startIdx2 + u]
-                    JYu = Jy[startIdx2 + u]
-                    JZu = Jz[startIdx2 + u]
-
-                    r12 = bathSpins.Pos[id] - bathSpins.Pos[id2]
-
-                    if norm(r12 * a) < (1.5 * 1.54e-10) || norm(r12 * a) > rDipole continue; end # i) Two adjacent P1 centres (dist < bond length) will create a different kind of defect. ii) Interaction between two P1 centres separated further than the dipole radius are considered to be suppressed.
-
-                    C12 = DipoleDipole(r12 * a, bathSpins.GyroRatio[id], bathSpins.GyroRatio[id2])
-
-                    H12 += C12 * (JZs * JZu - (bathSpins.Branch[id] == bathSpins.Branch[id2] ? 0.5 : 0.0) * (JXs * JXu + JYs * JYu))
-
-                end
-                startIdx2 += partitionSize2
-            end
+            HP1P1 += C12 * (JZs * JZr - (bathSpins.Branch[id] == bathSpins.Branch[id2] ? 0.5 : 0.0) * (JXs * JXr + JYs * JYr))
         end
-
-        startIdx += partitionSize
     end
 
     return HP1, HNV, HP1P1, HA, HB, H12
@@ -764,9 +720,10 @@ function getMFHamiltonian(
     mfSpins                 :: StructArray,
     indices                 :: Vector{Int64},
     mfStates                :: Vector{Float64},
-    totalPositions          :: Vector{Position{Float64}},
+    #totalPositions          :: Vector{Position{Float64}},
     spinOps                 :: spinOperators,
-    D                       :: Driving{Float64, String}  
+    D                       :: Driving{Float64, String},
+    mask                    :: BitVector
 )
 
     alpha = D.alpha
@@ -775,85 +732,79 @@ function getMFHamiltonian(
 
     HMF = spzeros(ComplexF64, size(Sz)...)
 
-    startIdx = 0
+    #mask = zeros(Bool, length(bathSpins.ID))
 
-    for idx in sort(indices)
-        
-        mask = bathSpins.Partition .== idx
-        
-        partitionIDs = bathSpins.ID[mask]
-        partitionSize = size(partitionIDs, 1)
-        
-        HMFPartition = spzeros(ComplexF64, size(Sz)...)
+    #for idx in sort(indices) mask .+= (bathSpins.Partition .== idx); end
 
-        for (s, id) in enumerate(partitionIDs)
+    totalPositions = bathSpins.Pos[mask]
 
-            JXs = Jx[startIdx + s]
-            JYs = Jy[startIdx + s]
-            JZs = Jz[startIdx + s]
+    partitionIDs = bathSpins.ID[mask]
+    partitionSize = size(partitionIDs, 1)
 
-            meanFieldZ = 0
-            meanFieldAlpha = 0
-            meanFieldP = 0
+    for (s, id) in enumerate(partitionIDs)
 
-            spinDriven          = bathSpins.Driven[id]
-            spinLGDriven        = bathSpins.LGDriven[id]
-            spinBranch          = bathSpins.Branch[id]
-            spinPosition        = bathSpins.Pos[id]
+        JXs = Jx[s]
+        JYs = Jy[s]
+        JZs = Jz[s]
+
+        meanFieldZ = 0
+        meanFieldAlpha = 0
+        meanFieldP = 0
+
+        spinDriven          = bathSpins.Driven[id]
+        spinLGDriven        = bathSpins.LGDriven[id]
+        spinBranch          = bathSpins.Branch[id]
+        spinPosition        = bathSpins.Pos[id]
             
-            for (p, mfspin) in enumerate(mfSpins)
+        for (p, mfspin) in enumerate(mfSpins)
 
-                if mfspin.Pos in totalPositions || (spinBranch == mfspin.Branch && spinLGDriven * mfspin.LGDriven) # Explicitly included spins and double magic pairs do not have a mean-field
-                    continue
-                elseif (spinLGDriven == mfspin.LGDriven && spinDriven != mfspin.Driven)
-                    r = spinPosition - mfspin.Pos
-                    if norm(r * a) < (1.5 * 1.54e-10) continue; end
-                    C = DipoleDipole(r * a, bathSpins.GyroRatio[s], mfspin.GyroRatio)
-
-                    if spinDriven meanFieldZ += C * mfStates[p]; end
-
-                    continue
-                end
-
+            if mfspin.Pos in totalPositions || (spinBranch == mfspin.Branch && spinLGDriven * mfspin.LGDriven) # Explicitly included spins and double magic pairs do not have a mean-field
+                continue
+            elseif (spinLGDriven == mfspin.LGDriven && spinDriven != mfspin.Driven)
                 r = spinPosition - mfspin.Pos
+                if norm(r * a) < (1.5 * 1.54e-10) continue; end
+                C = DipoleDipole(r * a, bathSpins.GyroRatio[s], mfspin.GyroRatio)
 
-                if norm(r * a) < (1.5 * 1.54e-10) continue; end # P1s that are closer than the diamond bond length are assumed to form a different defect and skipped
+                if spinDriven meanFieldZ += C * mfStates[p]; end
 
-                C = DipoleDipole(r * a, bathSpins.GyroRatio[s], mfspin.GyroRatio) # we dont care about which ratio to take because both are the same in this case
-
-                if mfspin.Driven * spinDriven && spinLGDriven == mfspin.LGDriven # both resonant, same or different branch, or both LG different branch
-
-                    if spinLGDriven == true # both LG (only in different branchs!)
-                        meanFieldP += C * 1/3 * mfStates[p] # it wont enter here because we do not consider this case for now
-                    elseif spinBranch == mfspin.Branch # both resonant, same branch
-                        meanFieldAlpha += -C * mfStates[p] * 1/2
-                    else # both resonant, different branch
-                        continue
-                    end
-
-                elseif spinLGDriven && !(mfspin.Driven) # bath spin magic, the other none 
-                    meanFieldP += C * mfStates[p] * 1/sqrt(3) # cos(theta) = 1 / √3
-
-                elseif mfspin.LGDriven && !(spinDriven) # bath spin none, the other magic
-                    meanFieldZ += C * mfStates[p] * 1/sqrt(3)
-
-                elseif spinDriven * mfspin.Driven && (spinLGDriven || mfspin.LGDriven) # one magic, the other resonant
-                    continue
-
-                else # other cases (none driven) normal mean field
-                    meanFieldZ += C * mfStates[p] # mfstates is +- 1/2
-
-                end
+                continue
             end
 
-            HMFPartition += meanFieldAlpha * (sin(alpha) * JXs + cos(alpha) * JYs)
-            HMFPartition += meanFieldZ * JZs
-            HMFPartition += meanFieldP * (1/sqrt(3) * JZs + sqrt(2/3) * (sin(alpha) * JXs + cos(alpha) * JYs))
+            r = spinPosition - mfspin.Pos
 
+            if norm(r * a) < (1.5 * 1.54e-10) continue; end # P1s that are closer than the diamond bond length are assumed to form a different defect and skipped
+
+            C = DipoleDipole(r * a, bathSpins.GyroRatio[s], mfspin.GyroRatio) # we dont care about which ratio to take because both are the same in this case
+
+            if mfspin.Driven * spinDriven && spinLGDriven == mfspin.LGDriven # both resonant, same or different branch, or both LG different branch
+
+                if spinLGDriven == true # both LG (only in different branchs!)
+                    meanFieldP += C * 1/3 * mfStates[p] # it wont enter here because we do not consider this case for now
+                elseif spinBranch == mfspin.Branch # both resonant, same branch
+                    meanFieldAlpha += -C * mfStates[p] * 1/2
+                else # both resonant, different branch
+                    continue
+                end
+
+            elseif spinLGDriven && !(mfspin.Driven) # bath spin magic, the other none 
+                meanFieldP += C * mfStates[p] * 1/sqrt(3) # cos(theta) = 1 / √3
+
+            elseif mfspin.LGDriven && !(spinDriven) # bath spin none, the other magic
+                meanFieldZ += C * mfStates[p] * 1/sqrt(3)
+
+            elseif spinDriven * mfspin.Driven && (spinLGDriven || mfspin.LGDriven) # one magic, the other resonant
+                continue
+
+            else # other cases (none driven) normal mean field
+                meanFieldZ += C * mfStates[p] # mfstates is +- 1/2
+
+            end
         end
 
-        HMF += HMFPartition
-        startIdx += partitionSize
+        HMF += meanFieldAlpha * (sin(alpha) * JXs + cos(alpha) * JYs)
+        HMF += meanFieldZ * JZs
+        HMF += meanFieldP * (1/sqrt(3) * JZs + sqrt(2/3) * (sin(alpha) * JXs + cos(alpha) * JYs))
+
     end
 
     return HMF
@@ -924,20 +875,20 @@ function IntAvSignal(
     bathSpins           :: StructArray,      
     mfSpins             :: StructArray,
     index               :: Vector{Int64},
-    totalPositions      :: Vector{Position{Float64}},
+    #totalPositions      :: Vector{Position{Float64}},
     spinOps             :: spinOperators,
     D                   :: Driving{Float64, String},
     H0                  :: Matrix{ComplexF64},
     timeVec             :: AbstractVector,
-    ux                  :: Matrix{ComplexF64},
     nPulse              :: Int64,
     rho0                :: Matrix{Float64},
-    meanField           :: Bool
+    meanField           :: Bool,
+    mask                :: BitVector
     )
 
     for p in eachindex(mfStates) mfStates[p] = rand() > 1/2 ? 1/2 : -1/2; end
 
-    meanField ? HMF = getMFHamiltonian(bathSpins, mfSpins, index, mfStates, totalPositions, spinOps, D) : HMF = zeros(size(H)...)
+    meanField ? HMF = getMFHamiltonian(bathSpins, mfSpins, index, mfStates, spinOps, D, mask) : HMF = zeros(size(H0)...)
 
     H = H0 + HMF
 
@@ -947,7 +898,7 @@ function IntAvSignal(
     sig = zeros(length(timeVec))
 
     for i in eachindex(timeVec)
-        nPulse == 0 ? U1 = U : U1 = (U * ux * U)^nPulse
+        nPulse == 0 ? U1 = U : U1 = (U * spinOps.Upi * U)^nPulse
         sig[i] += real(tr(U1 * rho0 * U1' * spinOps.Sx))
         U = U0 * U
     end
@@ -1027,12 +978,10 @@ function pCCECalculation(
 
         fill!(signal, 1.0)
 
-        #prevSignal = ones(points, numPartitions)
         AllSignals = Vector{Vector{Float64}}() # Every irreducible term of CCE
         AllLabels = Vector{Vector{Int64}}() # Every irreducible term label
 
         for order in 1:pCCEOrder
-
 
             indices = GetIndices(order, numPartitions)
             numContributions = length(indices)
@@ -1047,19 +996,16 @@ function pCCECalculation(
             for (counter, index) in enumerate(indices)
 
                 mask = in(index).(bathSpins.Partition)
-                totalSize = length(bathSpins.Partition[mask])
-                totalPositions = bathSpins.Pos[mask]
+                #totalPositions = bathSpins.Pos[mask]
 
-                ux = -im * spinOps.Sx
-
-                HP1, HNV, HP1P1, HA, HB, H12 = getHamiltonian(index, D, rDipole, spinOps, bathSpins)
+                HP1, HNV, HP1P1, HA, HB, H12 = getHamiltonian(index, D, rDipole, spinOps, bathSpins, mask)
 
                 H0 = HP1 + HNV + HP1P1 + H12 + HA + HB
 
                 sig = zeros(points)
 
                 for _ in 1:numIntAv
-                    sig .+= IntAvSignal(mfStates, bathSpins, mfSpins, index, totalPositions, spinOps, D, H0, timeVec, ux, nPulse, rho0, meanField)
+                    sig .+= IntAvSignal(mfStates, bathSpins, mfSpins, index, spinOps, D, H0, timeVec, nPulse, rho0, meanField, mask)
                 end
 
                 sig /= numIntAv
@@ -1079,7 +1025,7 @@ function pCCECalculation(
                 Labels[counter] = index
             end
 
-            if !isempty(Signal) # this part is fine
+            if !isempty(Signal)
                 newSignals = reduce(hcat, Signal)
                 signal .*= prod(newSignals, dims = 2)
             end

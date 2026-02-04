@@ -9,7 +9,7 @@ This is the code used in the manuscript arXiv:2512.06948 (https://doi.org/10.485
 - Coherence calculations up to any order of approximation in the CCE.
 - Fast implementation of the pCCE method written 100% in Julia.
 - Simulation of driven spin bath dynamics.
-- Electron baths, 14N baths and 15N baths can be generated.
+- Electron baths, 14N-P1 baths and 15N-P1 baths can be generated.
 - Mean-field theory for driven spin baths.
 - Adaptation of mean-field theory for LG bath driving.
 

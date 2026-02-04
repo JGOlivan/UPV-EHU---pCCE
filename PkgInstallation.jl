@@ -2,8 +2,6 @@
 ################               This file installs all the necessary Packages               ################
 ###########################################################################################################
 
-Version = true
-
 import Pkg
 
 function installPkg(Pkgs :: Vector{String})
@@ -21,6 +19,8 @@ function installPkg(Pkgs :: Dict{String, String})
     for (package, V) in Pkgs if isnothing(Base.find_package(package)) Pkg.add(Pkg.PackageSpec(;name = package, version = V)); end; end
 
 end
+
+Version = parse(Bool, ARGS[1])
 
 if !Version
 
@@ -48,7 +48,8 @@ if !Version
                     "GLPK",
 
                     "Plots",
-                    "LaTeXStrings"
+                    "LaTeXStrings",
+                    "StatsBase"
                 ]
 
 else
@@ -77,7 +78,8 @@ else
                     "GLPK" => "1.2.1",
 
                     "Plots" => "1.41.3",
-                    "LaTeXStrings" => "1.4.0"
+                    "LaTeXStrings" => "1.4.0",
+                    "StatsBase" => "0.34.10"
     )
 
 end

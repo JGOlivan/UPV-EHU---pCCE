@@ -64,9 +64,13 @@ MyTypes.type
 
 Note that you only need to include the files above once.
 
-## Configuration and running the code
+## Running the code
 
-The code requires specific Julia packages. These will be installed automatically when running the code.
+The code requires specific Julia packages. To install them, run
+```bash/zsh
+julia PkgInstallation.jl true
+```
+When the argument is true, the packages will be installed with a particular version (the one we have used).
 
 There are two ways of setting up the parameters for the simulation:
 1. **From the input file:**

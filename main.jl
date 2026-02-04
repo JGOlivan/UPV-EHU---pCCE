@@ -1,5 +1,3 @@
-include("PkgInstallation.jl")
-
 include("Libraries.jl") # useful libraries that will only work in main.jl
 include("Config.jl")
 

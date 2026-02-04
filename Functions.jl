@@ -7,7 +7,7 @@ module Functions
 using ..MyTypes, ..MyConstants
 export HahnSignal
 
-using StructArrays, SparseArrays, LinearAlgebra, Statistics, Random, Combinatorics, FastExpm, JuMP, Distributed, ProgressMeter, GLPK
+using StructArrays, SparseArrays, LinearAlgebra, Statistics, Random, Combinatorics, FastExpm, JuMP, Distributed, ProgressMeter, GLPK, StatsBase
 
 """
     hyperfineNV(r :: Position{<:Real}, GyroRatio :: Float64)
@@ -518,42 +518,35 @@ Assigns a resonance line to the bath spins.
 """
 function GetBranches!(bathSpins :: StructArray)
 
+    N = length(bathSpins.ID)
+
     if bathSpins.Species[1] == "e" # Electrons: 1 branch
 
-        for i in eachindex(bathSpins)
-            bathSpins.Branch[i] = 1
-        end
+        Branches = Dict(1 => 1)
+        bathSpins.Branch .= sample(collect(keys(Branches)), Weights(collect(values(Branches))), N)
 
     elseif bathSpins.Species[1] == "N14" # Nitrogen 14: 5 branches
 
-        for i in eachindex(bathSpins)
-            r = rand()
-            bathSpins.Branch[i] = r <= 1/12 ? 5 : r <= 2/12 ? 6 : r<= 5/12 ? 1 : r<= 8/12 ? 2 : 7
-        end
+        Branches = Dict(1 => 3/12, 2 => 3/12, 5 => 1/12, 6 => 1/12, 7 => 4/12)
+        bathSpins.Branch .= sample(collect(keys(Branches)), Weights(collect(values(Branches))), N)
 
     elseif bathSpins.Species[1] == "N15" # Nitrogen 15: 4 branches
 
-        for i in eachindex(bathSpins)
-            r = rand()
-            bathSpins.Branch[i] = r <= 1/8 ? 1 : r <= 2/8 ? 2 : r <= 5/8 ? 3 : 4
-        end
+        Branches = Dict(1 => 1/8, 2 => 1/8, 3 => 3/8, 4 => 3/8)
+        bathSpins.Branch .= sample(collect(keys(Branches)), Weights(collect(values(Branches))), N)
 
     elseif bathSpins.Species[1] == "N1415" # Nitrogen mixture: 7 branches
 
-        if rand() <= 0.996
-
-            for i in eachindex(bathSpins)
-                r = rand()
-                bathSpins.Branch[i] = r <= 1/12 ? 5 : r <= 2/12 ? 6 : r <= 5/12 ? 1 : r <= 8/12 ? 2 : 7
-            end
-
-        else
-
-            for i in eachindex(bathSpins)
-                r = rand()
-                bathSpins.Branch[i] = r <= 1/8 ? 1 : r <= 2/8 ? 2 : r <= 5/8 ? 3 : 4
-            end
-        end
+        Branches = Dict(
+            1 => 0.04 * 1/8 + 0.996 * 3/12,
+            2 => 0.04 * 1/8 + 0.996 * 3/12,
+            3 => 0.04 * 3/8,
+            4 => 0.04 * 3/8,
+            5 => 0.996 * 1/12,
+            6 => 0.996 * 1/12,
+            7 => 0.996 * 4/12
+        )
+        bathSpins.Branch .= sample(collect(keys(Branches)), Weights(collect(values(Branches))), N)
 
     end
 
@@ -646,10 +639,6 @@ function getHamiltonian(
     HA    = spzeros(ComplexF64, size(Sz)...)
     HB    = spzeros(ComplexF64, size(Sz)...)
 
-    #mask = zeros(Bool, length(bathSpins.ID))
-
-    #for idx in sort(indices) mask .+= (bathSpins.Partition .== idx); end
-
     partitionIDs = bathSpins.ID[mask]
     partitionSize = size(partitionIDs, 1)
 
@@ -720,7 +709,6 @@ function getMFHamiltonian(
     mfSpins                 :: StructArray,
     indices                 :: Vector{Int64},
     mfStates                :: Vector{Float64},
-    #totalPositions          :: Vector{Position{Float64}},
     spinOps                 :: spinOperators,
     D                       :: Driving{Float64, String},
     mask                    :: BitVector
@@ -731,10 +719,6 @@ function getMFHamiltonian(
     Sz, Jx, Jy, Jz = spinOps.Sz, spinOps.Jx, spinOps.Jy, spinOps.Jz
 
     HMF = spzeros(ComplexF64, size(Sz)...)
-
-    #mask = zeros(Bool, length(bathSpins.ID))
-
-    #for idx in sort(indices) mask .+= (bathSpins.Partition .== idx); end
 
     totalPositions = bathSpins.Pos[mask]
 
@@ -996,7 +980,6 @@ function pCCECalculation(
             for (counter, index) in enumerate(indices)
 
                 mask = in(index).(bathSpins.Partition)
-                #totalPositions = bathSpins.Pos[mask]
 
                 HP1, HNV, HP1P1, HA, HB, H12 = getHamiltonian(index, D, rDipole, spinOps, bathSpins, mask)
 

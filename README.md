@@ -49,20 +49,15 @@ end
 ## Help
 Every function defined in this code (in "Functions.jl") contains a small description of itself; what it is used for, what are the input arguments (and their types) and what it returns. To display this help, in the julia REPL, type '?' and then type:
 ```bash/zsh
-include("MyConstants.jl")
-include("MyTypes.jl")
-include("Functions.jl")
 Functions.func
 ```
 
 Similarly, custom types, defined in "MyTypes.jl", can also display help by typing '?' and:
 ```bash/zsh
-include("MyConstants.jl")
-include("MyTypes.jl")
 MyTypes.type
 ```
 
-Note that you only need to include the files above once.
+Note that you need to include the files "MyConstants", "MyTypes" and "MyFunctions" into your workspace (simply type in the REPL: include("file.jl")).
 
 ## Running the code
 
